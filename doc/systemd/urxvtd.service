@@ -1,0 +1,8 @@
+[Unit]
+Description=urxvt terminal daemon
+
+[Service]
+Environment=RXVT_SOCKET=%t/urxvtd-socket
+ExecStart=/usr/bin/urxvtd -o -a
+Restart=on-failure
+RestartSec=5s

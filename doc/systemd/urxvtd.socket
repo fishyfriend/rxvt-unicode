@@ -1,0 +1,8 @@
+[Unit]
+Description=socket for urxvtd, the urxvt terminal daemon
+
+[Socket]
+ListenStream=%t/urxvtd-socket
+
+[Install]
+WantedBy=graphical-session.target

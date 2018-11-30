@@ -41,6 +41,10 @@
 # include <sys/mman.h>
 #endif
 
+#if ENABLE_SYSTEMD
+#include <systemd/sd-daemon.h>
+#endif
+
 #include <errno.h>
 
 #include "rxvt.h"
@@ -75,7 +79,14 @@ struct unix_listener {
 
   void accept_cb (ev::io &w, int revents); ev::io accept_ev;
 
+  // create listener on a new socket
   unix_listener (const char *sockname);
+
+  // create listener on an existing socket
+  unix_listener (int descriptor);
+
+  // copy constructor
+  unix_listener (const unix_listener &other);
 };
 
 unix_listener::unix_listener (const char *sockname)
@@ -121,6 +132,23 @@ unix_listener::unix_listener (const char *sockname)
     }
 
   accept_ev.start (fd, ev::READ);
+}
+
+unix_listener::unix_listener (int descriptor)
+{
+  accept_ev.set<unix_listener, &unix_listener::accept_cb> (this);
+
+  fd = descriptor;
+
+  fcntl (fd, F_SETFD, FD_CLOEXEC);
+  fcntl (fd, F_SETFL, O_NONBLOCK);
+
+  accept_ev.start (fd, ev::READ);
+}
+
+unix_listener::unix_listener (const unix_listener &other)
+{
+  fd = other.fd;
 }
 
 void unix_listener::accept_cb (ev::io &w, int revents)
@@ -236,6 +264,9 @@ main (int argc, char *argv[])
 #if ENABLE_MLOCK
   static char opt_lock;
 #endif
+#if ENABLE_SYSTEMD
+  static char opt_activate;
+#endif
 
   for (int i = 1; i < argc; i++)
     {
@@ -252,6 +283,10 @@ main (int argc, char *argv[])
 #if ENABLE_PERL
       else if (!strcmp (argv [i], "-e") || !strcmp (argv [i], "--eval"))
         opt_eval = argv [++i];
+#endif
+#if ENABLE_SYSTEMD
+      else if (!strcmp (argv [i], "-a") || !strcmp (argv [i], "--activate"))
+        opt_activate = 1;
 #endif
       else
         {
@@ -276,13 +311,35 @@ main (int argc, char *argv[])
       displays.get (dpy ? dpy : ":0"); // move string logic into rxvt_display maybe?
 
   char *sockname = rxvt_connection::unix_sockname ();
-  unix_listener l (sockname);
+  char supplied_fd = 0;
+
+#if ENABLE_SYSTEMD
+  // optionally look for a socket file passed in by systemd.
+  if (opt_activate)
+    {
+      int n = sd_listen_fds (1);
+      if (n > 1)
+        {
+          fputs ("too many file descriptors received, aborting.\n", stderr);
+          exit (EXIT_FAILURE);
+        }
+      else if (n == 1)
+        supplied_fd = SD_LISTEN_FDS_START + 0;
+    }
+#endif
+
+  unix_listener l = supplied_fd ?
+    unix_listener (supplied_fd) :
+    unix_listener (sockname);
 
   chdir ("/");
 
   if (!opt_quiet)
     {
-      printf ("rxvt-unicode daemon listening on %s.\n", sockname);
+      if (supplied_fd)
+        puts ("rxvt-unicode daemon listening on received socket.");
+      else
+        printf ("rxvt-unicode daemon listening on %s.\n", sockname);
       fflush (stdout);
     }
 

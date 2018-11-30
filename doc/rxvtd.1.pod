@@ -81,6 +81,22 @@ listening sockets for additional protocols.
 The code is currently executed I<before> creating the normal listening
 sockets: this might change in future versions.
 
+=item B<-a>, B<--activate>
+
+Support systemd socket activation (requires systemd support to be enabled
+when compiling B<@@RXVT_NAME@@d>).
+
+This option causes urxvtd to check on startup whether systemd passed in a
+listening socket. If such a socket is found, urxvtd will use that socket instead
+of creating its own. Otherwise, it will fall back to creating a new socket
+as normal.
+
+Note that the filesystem path used by systemd for the socket should match
+the value of I<RXVT_SOCKET> in the user environment (or the default socket
+path if I<RXVT_SOCKET> is unset; see "ENVIRONMENT" below).  This is to
+ensure that B<@@RXVT_NAME@@c> can find the daemon. See I<doc/systemd>
+for more information about how to configure urxvtd as a systemd service.
+
 =back
 
 =head1 EXAMPLES

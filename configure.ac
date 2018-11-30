@@ -97,6 +97,7 @@ support_8bitctrls=no
 support_iso14755=yes
 support_styles=yes
 support_perl=yes
+support_systemd=no
 codesets=all
 
 dnl# --------------------------------------------------------------------------
@@ -133,6 +134,7 @@ AC_ARG_ENABLE(everything,
        support_iso14755=no
        support_styles=no
        support_perl=no
+       support_systemd=no
        codesets=
     fi
     if test x$enableval = xyes; then
@@ -161,6 +163,7 @@ AC_ARG_ENABLE(everything,
        support_iso14755=yes
        support_styles=yes
        support_perl=yes
+       support_systemd=yes
        codesets=all
     fi
   ])
@@ -413,6 +416,12 @@ AC_ARG_WITH(terminfo,
     AC_DEFINE_UNQUOTED(RXVT_TERMINFO, "$withval", Set TERMINFO value to the value given by configure) terminfo="$withval"
   fi])
 
+AC_ARG_ENABLE(systemd,
+  [  --enable-systemd        enable systemd socket activation],
+  [if test x$enableval = xyes -o x$enableval = xno; then
+    support_systemd=$enableval
+  fi])
+
 if test x$support_resources = xno; then
   if test x$support_frills = xyes || test x$support_perl = xyes; then
     AC_MSG_ERROR([--disable-resources requires --disable-frills --disable-perl])
@@ -480,6 +489,10 @@ AC_CHECK_HEADERS( \
 	stdint.h \
 	wchar.h \
 )
+
+if test x$support_systemd = xyes; then
+   AC_CHECK_HEADER(systemd/sd-daemon.h)
+fi
 
 AC_CACHE_CHECK([for XLIB_ILLEGAL_ACCESS], rxvt_cv_xlib_illegal_access,
 [AC_COMPILE_IFELSE(
@@ -582,6 +595,13 @@ TTY_GROUP_CHECK
 dnl# --------------------------------------------------------------------------
 dnl# now add and remove other stuff
 dnl# --------------------------------------------------------------------------
+if test x$support_systemd = xyes; then
+  RXVT_CHECK_MODULES(SYSTEMD, systemd, [
+    LIBS="$LIBS -lsystemd"
+  ], [AC_MSG_ERROR(systemd not found)])
+  AC_DEFINE(ENABLE_SYSTEMD, 1, Define if you want to enable a command-line option for systemd socket activation)
+fi
+
 support_image=no
 if test x$support_inheritpixmap = xyes || test x$support_pixbuf = xyes; then
   support_image=yes

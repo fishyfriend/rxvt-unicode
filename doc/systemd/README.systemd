@@ -1,0 +1,25 @@
+README for systemd support
+--------------------------
+
+rxvt-unicode includes support for running the terminal daemon (urxvtd) as a
+socket-activated service under systemd. To enable socket activation, build
+rxvt-unicode with the "--with-systemd" configure flag and invoke urxvtd with
+the "--activate"/"-a" command line option. (Consult the man page for more
+details regarding the behavior of this option.)
+
+You will also need to set up socket and service unit files for urxvtd. For most
+systemd setups, it should suffice to copy the example unit files in this
+directory into /etc/systemd/user after applying any customizations for your
+particular situation. Then run:
+
+    systemctl --user enable --now urxvtd.socket
+
+Finally, be sure that RXVT_SOCKET is set correctly in the environment of each
+user who will run urxvtc. The example unit files use the path string
+"%t/urxvtd-socket"; for user services, this evaluates to
+"$XDG_RUNTIME_DIR/urxvt-socket". Thus, in your user's shell profile, you could
+include the line
+
+    export RXVT_SOCKET="$XDG_RUNTIME_DIR/urxvt-socket"
+
+to ensure that urxvtc can find the daemon.
