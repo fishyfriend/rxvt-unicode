@@ -311,7 +311,7 @@ main (int argc, char *argv[])
       displays.get (dpy ? dpy : ":0"); // move string logic into rxvt_display maybe?
 
   char *sockname = rxvt_connection::unix_sockname ();
-  char supplied_fd = 0;
+  int supplied_fd = 0;
 
 #if ENABLE_SYSTEMD
   // optionally look for a socket file passed in by systemd.
